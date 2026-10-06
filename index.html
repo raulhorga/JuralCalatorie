@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f4f7f2" />
+  <title>Calorie Compass</title>
+  <link rel="stylesheet" href="styles.css?v=17-responsive" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__mark" aria-hidden="true">◒</div>
+      <div><strong>Calorie Compass <em class="version-chip">v17 RESPONSIVE</em></strong><span>Jurnal alimentar simplu, vizual și prietenos.</span></div>
+    </div>
+    <div class="topbar__actions">
+      <small id="syncStatus" class="sync-status">Se conectează…</small>
+      <button id="syncButton" class="button button--ghost" type="button">↻ Sincronizează</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="hero-card">
+      <div class="hero-orb hero-orb--one" aria-hidden="true"></div>
+      <div class="hero-orb hero-orb--two" aria-hidden="true"></div>
+      <div>
+        <p class="eyebrow"><span class="eyebrow-dot"></span> ZIUA SELECTATĂ</p>
+        <div class="date-heading">
+          <button id="prevDay" class="icon-button" type="button" aria-label="Ziua anterioară">‹</button>
+          <div>
+            <h1 id="selectedDateLabel">Astăzi</h1>
+            <button id="openDatePicker" class="date-link" type="button">Alege din calendar</button>
+            <input id="datePicker" class="sr-only" type="date" />
+          </div>
+          <button id="nextDay" class="icon-button" type="button" aria-label="Ziua următoare">›</button>
+        </div>
+      </div>
+      <div class="target-wrap target-wrap--nutrition">
+        <div id="targetRing" class="target-ring" aria-label="Progres caloric">
+          <div><strong id="dailyCalories">0</strong><span>din 1800 kcal</span></div>
+        </div>
+        <span id="targetPercent" class="target-percent">0% din obiectiv</span>
+
+        <div class="daily-nutrition" aria-label="Valori nutriționale zilnice">
+          <div class="daily-nutrition__item" id="dailyFatCard">
+            <span>Grăsimi</span>
+            <strong><b id="dailyFat">0</b> g</strong>
+            <small>reper 30–60 g</small>
+          </div>
+          <div class="daily-nutrition__item" id="dailyCarbsCard">
+            <span>Carbohidrați</span>
+            <strong><b id="dailyCarbs">0</b> g</strong>
+            <small>reper 203–338 g</small>
+          </div>
+          <div class="daily-nutrition__item" id="dailyProteinCard">
+            <span>Proteine</span>
+            <strong><b id="dailyProtein">0</b> g</strong>
+            <small>reper 45–68 g</small>
+          </div>
+          <div class="daily-nutrition__item" id="dailyFiberCard">
+            <span>Fibre</span>
+            <strong><b id="dailyFiber">0</b> g</strong>
+            <small>reper ≥25 g</small>
+          </div>
+          <div class="daily-nutrition__item daily-nutrition__item--sugar" id="dailySugarCard">
+            <span>Zahăr total</span>
+            <strong><b id="dailySugar">0</b> g</strong>
+            <small>WHO: zahăr liber &lt;45 g*</small>
+          </div>
+        </div>
+        <p class="nutrition-reference-note">* Reperul WHO este pentru <strong>zahăr liber</strong>, nu pentru zahărul total din fructe/lactate. Repere generale pentru adulți, calculate la 1800 kcal.</p>
+      </div>
+      <div class="hero-card__side">
+        <span class="status-pill" id="dayStatus"><i></i> În obiectiv</span>
+        <p id="remainingText">Mai ai 1800 kcal disponibile.</p>
+        <button id="openMealDialog" class="button button--primary button--hero" type="button"><span class="button-plus">+</span> Adaugă aliment</button>
+      </div>
+    </section>
+
+    <section class="summary-grid" aria-label="Rezumat calorii">
+      <article class="metric-card metric-card--accent"><div class="metric-card__icon">⚡</div><div><span>Calorii azi</span><strong id="metricCalories">0</strong><small>din 1800 kcal</small></div></article>
+      <article class="metric-card"><div class="metric-card__icon">◌</div><div><span>Alimente</span><strong id="metricItems">0</strong><small>în ziua selectată</small></div></article>
+      <article class="metric-card"><div class="metric-card__icon">⌁</div><div><span>Cea mai mare masă</span><strong id="metricMeal">—</strong><small id="metricMealSub">fără înregistrări</small></div></article>
+      <article class="metric-card"><div class="metric-card__icon">↗</div><div><span>Media 7 zile</span><strong id="metricAverage">0</strong><small>kcal / zi</small></div></article>
+    </section>
+
+    <section class="content-grid">
+      <div class="left-column">
+        <section class="panel calendar-panel">
+          <div class="panel__header">
+            <div><p class="eyebrow">CALENDAR</p><h2 id="calendarTitle">Luna</h2></div>
+            <div class="calendar-nav"><button id="prevMonth" class="icon-button icon-button--small" type="button">‹</button><button id="todayButton" class="button button--soft" type="button">Astăzi</button><button id="exportMonthExcel" class="button button--excel button--compact" type="button">⇩ Excel luna</button><button id="nextMonth" class="icon-button icon-button--small" type="button">›</button></div>
+          </div>
+          <div class="calendar-weekdays"><span>Lu</span><span>Ma</span><span>Mi</span><span>Jo</span><span>Vi</span><span>Sâ</span><span>Du</span></div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+          <div class="calendar-legend"><span><i class="dot dot--ok"></i> în obiectiv</span><span><i class="dot dot--over"></i> peste 1800</span><span><i class="dot dot--empty"></i> fără date</span></div>
+        </section>
+
+        <section class="panel chart-panel">
+          <div class="panel__header">
+            <div><p class="eyebrow">EVOLUȚIE</p><h2>Calorii zilnice</h2><p class="panel__hint">Ultimele 14 zile până la data selectată · țintă 1800 kcal</p></div>
+          </div>
+          <div class="chart-wrap"><canvas id="calorieChart" role="img" aria-label="Grafic calorii zilnice"></canvas></div>
+        </section>
+      </div>
+
+      <div class="right-column">
+        <section class="panel diary-panel">
+          <div class="panel__header">
+            <div><p class="eyebrow">JURNAL</p><h2>Ce ai mâncat</h2><p class="panel__hint">Mesele zilei, într-o privire.</p></div>
+            <button id="openMealDialog2" class="button button--primary button--compact" type="button">+ Adaugă</button>
+          </div>
+          <div id="mealGroups" class="meal-groups"></div>
+          <div id="emptyDiary" class="empty-state" hidden><div class="empty-state__art">🥗</div><h3>Ziua începe de aici</h3><p>Adaugă ce ai mâncat și noi calculăm automat caloriile.</p><button id="emptyAdd" class="button button--primary" type="button">Adaugă aliment</button></div>
+        </section>
+
+        <section class="panel food-panel">
+          <div class="panel__header">
+            <div><p class="eyebrow">BAZA DE ALIMENTE</p><h2>Calorii / 100 g</h2><p class="panel__hint">Editările se salvează automat în EtherCalc.</p></div>
+            <div class="food-header-actions">
+              <button id="importFoodsCsv" class="button button--ghost button--compact" type="button">⇧ Importă CSV</button>
+              <button id="openFoodDialog" class="button button--soft button--compact" type="button">+ Aliment nou</button>
+              <input id="foodCsvInput" class="sr-only" type="file" accept=".csv,text/csv" />
+            </div>
+          </div>
+          <label class="search-box"><span>⌕</span><input id="foodSearch" type="search" placeholder="Caută un aliment…" /></label>
+          <div id="foodTable" class="food-table"></div>
+          <button id="showAllFoods" class="text-button" type="button">Arată toate alimentele</button>
+        </section>
+      </div>
+    </section>
+
+    <section class="data-tools">
+      <div><strong>Surse EtherCalc</strong><span>Jurnalul și baza de alimente sunt sincronizate separat.</span></div>
+      <div class="data-tools__actions">
+        <a class="button button--ghost" href="https://ethercalc.net/=5pnc2i51phgo" target="_blank" rel="noopener noreferrer">Jurnal calorii ↗</a>
+        <a class="button button--ghost" href="https://ethercalc.net/=yve145gi1nxa" target="_blank" rel="noopener noreferrer">Mapare alimente ↗</a>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="mealDialog" class="modal">
+    <form id="mealForm" method="dialog" novalidate>
+      <div class="modal__header"><div><p class="eyebrow">ÎNREGISTRARE</p><h2 id="mealDialogTitle">Adaugă aliment</h2></div><button class="icon-button" id="closeMealDialog" type="button">×</button></div>
+      <input id="mealId" type="hidden" />
+      <div class="form-grid">
+        <label class="field field--full"><span>Caută aliment</span><input id="mealFoodSearch" type="search" placeholder="Scrie numele alimentului..." autocomplete="off" /></label>
+        <label class="field field--full"><span>Aliment *</span><select id="mealFood" required></select></label>
+        <label class="field"><span>Cantitate (g) *</span><input id="mealGrams" type="number" min="1" step="1" value="100" required /></label>
+        <label class="field"><span>Masă</span><select id="mealType"><option>Mic dejun</option><option>Prânz</option><option>Cină</option><option>Gustare</option></select></label>
+        <div class="field field--full">
+          <span>Valori calculate pentru porție</span>
+          <div class="nutrition-preview">
+            <div class="nutrition-preview__item nutrition-preview__item--calories"><span>Calorii</span><strong id="mealCaloriesPreview">0</strong><small>kcal</small></div>
+            <div class="nutrition-preview__item"><span>Grăsimi</span><strong id="mealFatPreview">0</strong><small>g</small></div>
+            <div class="nutrition-preview__item"><span>Carbohidrați</span><strong id="mealCarbsPreview">0</strong><small>g</small></div>
+            <div class="nutrition-preview__item"><span>Proteine</span><strong id="mealProteinPreview">0</strong><small>g</small></div>
+            <div class="nutrition-preview__item"><span>Fibre</span><strong id="mealFiberPreview">0</strong><small>g</small></div>
+            <div class="nutrition-preview__item"><span>Zahăr</span><strong id="mealSugarPreview">0</strong><small>g</small></div>
+          </div>
+        </div>
+        <label class="field field--full"><span>Notiță</span><input id="mealNote" maxlength="160" placeholder="Opțional: ex. cu lapte, fără sos…" /></label>
+      </div>
+      <div class="modal__footer"><button id="cancelMeal" class="button button--ghost" type="button">Renunță</button><button class="button button--primary" type="submit">Salvează</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="foodDialog" class="modal modal--small">
+    <form id="foodForm" method="dialog" novalidate>
+      <div class="modal__header"><div><p class="eyebrow">BAZA DE ALIMENTE</p><h2 id="foodDialogTitle">Adaugă aliment</h2></div><button class="icon-button" id="closeFoodDialog" type="button">×</button></div>
+      <input id="foodId" type="hidden" />
+      <div class="form-grid">
+        <label class="field field--full"><span>Denumire *</span><input id="foodName" required maxlength="100" placeholder="Ex: Orez fiert" /></label>
+        <label class="field"><span>Calorii / 100 g *</span><input id="foodCalories" type="number" min="0" step="0.1" required /></label>
+        <label class="field"><span>Grăsimi / 100 g</span><input id="foodFat" type="number" min="0" step="0.1" value="0" /></label>
+        <label class="field"><span>Carbohidrați / 100 g</span><input id="foodCarbs" type="number" min="0" step="0.1" value="0" /></label>
+        <label class="field"><span>Proteine / 100 g</span><input id="foodProtein" type="number" min="0" step="0.1" value="0" /></label>
+        <label class="field"><span>Fibre / 100 g</span><input id="foodFiber" type="number" min="0" step="0.1" value="0" /></label>
+        <label class="field"><span>Zahăr / 100 g</span><input id="foodSugar" type="number" min="0" step="0.1" value="0" /></label>
+        <label class="field field--full"><span>Categorie</span><input id="foodCategory" maxlength="60" placeholder="Ex: Cereale" /></label>
+        <p class="field-help field--full">Valorile nutriționale se salvează în EtherCalc și se calculează automat în funcție de cantitatea consumată.</p>
+      </div>
+      <div class="modal__footer"><button id="deleteFood" class="button button--danger-soft" type="button" hidden>Șterge</button><span class="modal-spacer"></span><button id="cancelFood" class="button button--ghost" type="button">Renunță</button><button class="button button--primary" type="submit">Salvează</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="app.js?v=17-responsive"></script>
+</body>
+</html>
