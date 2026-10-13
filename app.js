@@ -102,7 +102,20 @@ async function savePhotosOnly(){
 async function saveAll(){await saveTripsOnly();await savePhotosOnly();toast('Salvat în EtherCalc.')}
 async function syncAll(manual=false){if(state.syncing||state.saving)return;state.syncing=true;setSync('Sincronizare…');try{const [tc,pc]=await Promise.all([getCsv(TRIP_ROOM),getCsv(PHOTO_ROOM)]);state.trips=parseTrips(tc);state.photos=parsePhotos(pc);renderAll();setSync('Sincronizat','ok');if(manual)toast('Datele au fost sincronizate.')}catch(e){console.error(e);setSync('Offline / eroare','error');if(manual)toast('Nu am putut citi EtherCalc.')}finally{state.syncing=false}}
 
-function getTripPhotos(id){return state.photos.filter(p=>p.tripId===id)}
+let indexedPhotos = null;
+let indexedPhotoCount = -1;
+const photosByTrip = new Map();
+function getTripPhotos(id){
+  if(indexedPhotos!==state.photos||indexedPhotoCount!==state.photos.length){
+    photosByTrip.clear();
+    for(const photo of state.photos){
+      if(!photosByTrip.has(photo.tripId))photosByTrip.set(photo.tripId,[]);
+      photosByTrip.get(photo.tripId).push(photo);
+    }
+    indexedPhotos=state.photos;indexedPhotoCount=state.photos.length;
+  }
+  return photosByTrip.get(id)||[];
+}
 function coverFor(t){const ps=getTripPhotos(t.id);return ps.find(p=>p.id===t.coverPhotoId)||ps.find(p=>p.isCover)||ps[0]||null}
 function dateRangeDays(a,b){if(!validDate(a)||!validDate(b))return 0;const start=fromISO(a),end=fromISO(b);return Math.max(1,Math.round((end-start)/86400000)+1)}
 function fmtRange(t){const opts={day:'numeric',month:'short',year:'numeric'};const a=validDate(t.startDate)?fromISO(t.startDate).toLocaleDateString('ro-RO',opts):'—';const b=validDate(t.endDate)?fromISO(t.endDate).toLocaleDateString('ro-RO',opts):'';return t.startDate===t.endDate?a:`${a} — ${b}`}
@@ -446,6 +459,96 @@ async function addPhotos(files){const tripId=el.tripId.value;if(!tripId){toast('
 async function setCover(photoId){const p=state.photos.find(x=>x.id===photoId);if(!p)return;const t=state.trips.find(x=>x.id===p.tripId);if(!t)return;t.coverPhotoId=p.id;t.updatedAt=new Date().toISOString();state.photos.filter(x=>x.tripId===p.tripId).forEach(x=>{x.isCover=x.id===p.id;x.updatedAt=new Date().toISOString()});renderPhotoEditor(t.id);renderAll();await saveTripsOnly();await savePhotosOnly()}
 async function deletePhoto(photoId){const p=state.photos.find(x=>x.id===photoId);if(!p)return;const t=state.trips.find(x=>x.id===p.tripId);state.photos=state.photos.filter(x=>x.id!==photoId);if(t&&t.coverPhotoId===photoId){const next=getTripPhotos(t.id)[0];t.coverPhotoId=next?.id||'';if(next)next.isCover=true}renderPhotoEditor(p.tripId);renderAll();await saveTripsOnly();await savePhotosOnly()}
 
+const exportLibraries = new Map();
+function loadExportLibrary(url,globalName){
+  if(window[globalName])return Promise.resolve(window[globalName]);
+  if(exportLibraries.has(url))return exportLibraries.get(url);
+  const promise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>fail(),30000);
+    function fail(){
+      clearTimeout(timer);script.remove();exportLibraries.delete(url);
+      reject(new Error(`Biblioteca ${globalName} nu s-a putut incarca. Verifica conexiunea.`));
+    }
+    script.src=url;script.async=true;script.onerror=fail;
+    script.onload=()=>{clearTimeout(timer);if(window[globalName])resolve(window[globalName]);else fail()};
+    document.head.append(script);
+  });
+  exportLibraries.set(url,promise);
+  return promise;
+}
+function exportFileName(value,fallback){
+  const clean=String(value||'').normalize('NFKC').replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g,'_').replace(/[. ]+$/g,'').trim().slice(0,80).replace(/[. ]+$/g,'');
+  return clean&&!/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(clean)?clean:fallback;
+}
+function downloadExport(blob,name){
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement('a');anchor.href=url;anchor.download=name;
+  document.body.append(anchor);anchor.click();anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+async function exportJournal(){
+  const button=$('#exportButton');
+  if(button.disabled)return;
+  if(state.syncing||state.saving){toast('Asteapta finalizarea sincronizarii sau salvarii.');return}
+  if(!state.trips.length){toast('Nu exista calatorii de exportat.');return}
+  const label=button.querySelector('span');const oldText=label.textContent;
+  const trips=state.trips.map(trip=>({...trip,locations:(trip.locations||[]).map(location=>({...location}))}));
+  const photos=state.photos.map(photo=>({...photo}));
+  button.disabled=true;button.setAttribute('aria-busy','true');label.textContent='Se exporta...';
+  try{
+    const [ExcelJS,JSZip]=await Promise.all([
+      loadExportLibrary('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','ExcelJS'),
+      loadExportLibrary('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js','JSZip')
+    ]);
+    const zip=new JSZip();
+    const folders=new Map(trips.map((trip,index)=>[trip.id,`${String(index+1).padStart(3,'0')}_${exportFileName(trip.title||trip.city,'Calatorie')}`]));
+    const photoRows=[['id','trip_id','name','mime','caption','is_cover','updated_at','zip_path']];
+    const extensions={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/avif':'avif','image/bmp':'bmp','image/svg+xml':'svg'};
+    for(const [index,photo] of photos.entries()){
+      if(!/^data:image\//i.test(photo.dataUrl))throw new Error(`Imagine invalida: ${photo.name||photo.id}`);
+      const response=await fetchWithTimeout(photo.dataUrl);
+      if(!response.ok)throw new Error(`Imagine indisponibila: ${photo.name||photo.id}`);
+      const blob=await response.blob();
+      if(!blob.size||!extensions[blob.type.toLowerCase()])throw new Error(`Format imagine invalid: ${photo.name||photo.id}`);
+      const base=exportFileName(String(photo.name||photo.id).replace(/\.[^.]+$/,''),'Fotografie');
+      const path=`${folders.get(photo.tripId)||'Neasociate'}/${String(index+1).padStart(4,'0')}_${base}.${extensions[blob.type.toLowerCase()]}`;
+      zip.file(path,await blob.arrayBuffer());
+      photoRows.push([photo.id,photo.tripId,photo.name,blob.type,photo.caption,!!photo.isCover,photo.updatedAt,path]);
+      label.textContent=`Imagini ${index+1}/${photos.length}`;
+    }
+    const tripRows=[TRIP_HEADERS,...trips.map(trip=>[
+      trip.id,trip.startDate,trip.endDate,trip.city,trip.country,trip.lat,trip.lng,
+      trip.accommodation,trip.opinion,trip.music,trip.highlights,trip.food,trip.companions,
+      trip.rating,trip.cost,trip.currency,trip.mood,trip.tags,trip.notes,trip.coverPhotoId,
+      trip.title,JSON.stringify(trip.locations),trip.updatedAt
+    ])];
+    const stopRows=[['trip_id','order','id','name','country','date','lat','lng','notes','accommodation'],
+      ...trips.flatMap(trip=>trip.locations.map((location,index)=>[
+        trip.id,index+1,location.id,location.name,location.country,location.date,
+        location.lat,location.lng,location.notes,location.accommodation
+      ]))];
+    const workbook=new ExcelJS.Workbook();
+    for(const [name,rows] of [['Calatorii',tripRows],['Opriri',stopRows],['Fotografii',photoRows]]){
+      const sheet=workbook.addWorksheet(name);
+      sheet.addRows(rows);
+      sheet.columns=rows[0].map(header=>({width:header==='notes'||header==='zip_path'?48:22}));
+      sheet.autoFilter={from:{row:1,column:1},to:{row:1,column:rows[0].length}};
+      sheet.views=[{state:'frozen',ySplit:1}];
+      sheet.getRow(1).font={bold:true};
+    }
+    label.textContent='Pregatesc fisierele...';
+    const excel=new Blob([await workbook.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const archive=await zip.generateAsync({type:'blob',compression:'STORE'},progress=>{label.textContent=`ZIP ${Math.round(progress.percent)}%`});
+    const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+    downloadExport(excel,`Atlas_calatorii_${stamp}.xlsx`);
+    downloadExport(archive,`Atlas_imagini_${stamp}.zip`);
+    toast(`Export pregatit: ${trips.length} calatorii si ${photos.length} fotografii. Permite descarcarile multiple daca browserul solicita.`);
+  }catch(error){console.error('Export Atlas',error);toast(`Export esuat: ${error.message||'eroare necunoscuta'}`)}
+  finally{button.disabled=false;button.removeAttribute('aria-busy');label.textContent=oldText}
+}
+
+$('#exportButton').onclick=exportJournal;
 el.addStop.onclick=()=>addStopDraft({date:el.startDate.value||todayISO()});
 el.stopList.addEventListener('click',e=>{const pick=e.target.closest('[data-pick-stop]');if(pick){selectStop(pick.dataset.pickStop);return}const rem=e.target.closest('[data-remove-stop]');if(rem){state.editLocations=state.editLocations.filter(x=>x.id!==rem.dataset.removeStop);if(!state.editLocations.length)addStopDraft({date:el.startDate.value||todayISO()});else{if(state.activeStopId===rem.dataset.removeStop)state.activeStopId=state.editLocations[0].id;renderStopEditor();focusActiveStopOnMap()}return}});
 el.stopList.addEventListener('input',e=>{const attrs=['name','country','date','notes'];for(const a of attrs){const id=e.target.dataset[`stop${a[0].toUpperCase()+a.slice(1)}`];if(id){const l=state.editLocations.find(x=>x.id===id);if(l){l[a]=e.target.value;updateLegacyPrimary();if(id===state.activeStopId&&a==='name')el.pickerTitle.textContent=`Alege poziția pentru: ${l.name||'oprirea selectată'}`}}}});

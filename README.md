@@ -11,15 +11,29 @@ Jurnal de călătorie web cu:
 - călătorii pe mai multe zile;
 - itinerarii cu mai multe opriri;
 - fotografii;
+- export complet Excel (`.xlsx`) si fotografii in arhiva ZIP;
 - sincronizare EtherCalc;
 - interfață responsive pentru desktop, tabletă și mobil.
+
+## Export
+
+Butonul **Export Excel + ZIP**, din zona de date de la finalul paginii, descarca
+doua fisiere: un Excel cu foile `Calatorii`, `Opriri` si `Fotografii`, plus un ZIP
+cu toate imaginile stocate, organizate pe calatorii. Foaia `Fotografii` include
+calea fiecarei imagini din arhiva. Exportul include toate calatoriile incarcate,
+indiferent de filtrul de cautare, si nu modifica datele din EtherCalc.
+
+Asteapta finalizarea sincronizarii inainte de export. Bibliotecile ExcelJS si
+JSZip se incarca la prima apasare, deci este necesara o conexiune la internet.
+Permite descarcarile multiple daca browserul solicita acest lucru. Fara imagini,
+arhiva ZIP este goala. Imaginile exportate sunt versiunile comprimate deja stocate
+in jurnal, nu fisierele originale de dinaintea incarcarii.
 
 ## Fișiere
 
 - `index.html` — pagina principală;
 - `styles.css` — toate stilurile aplicației;
 - `app.js` — logica aplicației;
-- `atlas_journal_ALL_IN_ONE_v7_3_MAPTILER.html` — varianta cu totul într-un singur fișier.
 
 ## MapTiler
 
@@ -41,6 +55,3 @@ Pune în același folder:
 
 Apoi publică folderul prin GitHub Pages sau alt hosting static.
 
-## Variante `.txt`
-
-În folder sunt incluse și copii `.txt` ale tuturor fișierelor principale, utile când platforma nu permite descărcarea directă a fișierelor `.html`, `.css` sau `.js`.
